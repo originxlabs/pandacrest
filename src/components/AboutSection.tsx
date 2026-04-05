@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import classroomImg from "@/assets/classroom-nursery.jpg";
@@ -6,7 +6,24 @@ import teacherReading from "@/assets/teacher-reading.jpg";
 import schoolBuilding from "@/assets/school-building.jpg";
 import childrenPlaying from "@/assets/children-playing.jpg";
 import activitiesImg from "@/assets/activities.jpg";
+import artsCraftsImg from "@/assets/arts-crafts.jpg";
+import outdoorPlayImg from "@/assets/outdoor-play.jpg";
+import musicClassImg from "@/assets/music-class.jpg";
+import heroSchoolImg from "@/assets/hero-school.png";
+import convergenceVideo from "@/assets/panda-convergence-model.mp4";
+import highTechVideo from "@/assets/high-tech-high-touch-equation.mp4";
 import { Eye, Target, Heart } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Carousel, CarouselContent, CarouselItem, type CarouselApi } from "@/components/ui/carousel";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -16,8 +33,174 @@ const pillars = [
   { icon: Heart, title: "Philosophy", desc: "Every child is unique. We celebrate individuality, foster creativity, and build a foundation of lifelong love for learning.", color: "bg-peach" },
 ];
 
+type AboutSlide = {
+  title: string;
+  description: string;
+  mediaType: "image" | "video";
+  src: string;
+  alt: string;
+};
+
+const aboutSlides: AboutSlide[] = [
+  {
+    title: "A nurturing school culture",
+    description:
+      "Every child is welcomed by caring educators who build trust, confidence, and joyful routines from day one.",
+    mediaType: "image",
+    src: schoolBuilding,
+    alt: "Panda Crest school building",
+  },
+  {
+    title: "Modern, engaging classrooms",
+    description:
+      "Our learning spaces are age-appropriate and activity-led to develop language, social skills, and independent thinking.",
+    mediaType: "image",
+    src: classroomImg,
+    alt: "Panda Crest classroom setup",
+  },
+  {
+    title: "Mentored by passionate teachers",
+    description:
+      "Teachers guide children through stories, play, and exploration so they feel supported while discovering new interests.",
+    mediaType: "image",
+    src: teacherReading,
+    alt: "Teacher reading to children",
+  },
+  {
+    title: "Play, movement, and expression",
+    description:
+      "A balance of indoor and outdoor activities helps children grow physically, emotionally, and creatively.",
+    mediaType: "image",
+    src: childrenPlaying,
+    alt: "Children playing and learning together",
+  },
+  {
+    title: "Creative art and craft corners",
+    description:
+      "Children explore colors, textures, and ideas through guided and free-form art activities that build confidence.",
+    mediaType: "image",
+    src: artsCraftsImg,
+    alt: "Children doing arts and crafts",
+  },
+  {
+    title: "Outdoor discovery and movement",
+    description:
+      "Structured outdoor play supports gross motor development, teamwork, and joyful social interaction.",
+    mediaType: "image",
+    src: outdoorPlayImg,
+    alt: "Children in outdoor play area",
+  },
+  {
+    title: "Music and rhythm learning",
+    description:
+      "Songs, rhythm activities, and group participation strengthen listening, language, and expressive skills.",
+    mediaType: "image",
+    src: musicClassImg,
+    alt: "Music class with children",
+  },
+  {
+    title: "Safe, modern learning campus",
+    description:
+      "The school infrastructure combines safety and child-friendly design to make every day comfortable and secure.",
+    mediaType: "image",
+    src: heroSchoolImg,
+    alt: "Modern Panda Crest campus",
+  },
+  {
+    title: "Hands-on daily activity blocks",
+    description:
+      "Daily activity periods balance learning outcomes with joy, curiosity, and playful participation.",
+    mediaType: "image",
+    src: activitiesImg,
+    alt: "Panda Crest activities in progress",
+  },
+  {
+    title: "Whole-child development approach",
+    description:
+      "Academics, social values, communication, and emotional wellbeing are integrated into every classroom routine.",
+    mediaType: "image",
+    src: classroomImg,
+    alt: "Children learning in classroom",
+  },
+  {
+    title: "Panda Convergence Model",
+    description:
+      "Watch how Panda Crest blends nurturing care, modern methods, and joyful schooling into one learning journey.",
+    mediaType: "video",
+    src: convergenceVideo,
+    alt: "Panda Convergence Model video",
+  },
+  {
+    title: "High-Tech, High-Touch Equation",
+    description:
+      "This video highlights how technology and human connection work together at Panda Crest for better outcomes.",
+    mediaType: "video",
+    src: highTechVideo,
+    alt: "High-Tech High-Touch Equation video",
+  },
+];
+
 const AboutSection = () => {
   const ref = useRef<HTMLDivElement>(null);
+  const [open, setOpen] = useState(false);
+  const [api, setApi] = useState<CarouselApi>();
+  const [currentSlide, setCurrentSlide] = useState(1);
+  const [totalSlides, setTotalSlides] = useState(aboutSlides.length);
+  const videoRefs = useRef<Array<HTMLVideoElement | null>>([]);
+
+  const syncVideoPlayback = () => {
+    const activeIndex = (api?.selectedScrollSnap() ?? 0);
+
+    videoRefs.current.forEach((video, index) => {
+      if (!video) {
+        return;
+      }
+
+      const shouldPlay = open && index === activeIndex;
+      if (shouldPlay) {
+        void video.play().catch(() => {
+          // Keep controls visible so user can play manually if browser blocks autoplay.
+        });
+        return;
+      }
+
+      video.pause();
+    });
+  };
+
+  useEffect(() => {
+    if (!api) {
+      return;
+    }
+
+    const updateCurrentSlide = () => {
+      setCurrentSlide(api.selectedScrollSnap() + 1);
+      syncVideoPlayback();
+    };
+
+    setTotalSlides(api.scrollSnapList().length);
+    updateCurrentSlide();
+    api.on("select", updateCurrentSlide);
+    api.on("reInit", updateCurrentSlide);
+
+    return () => {
+      api.off("select", updateCurrentSlide);
+      api.off("reInit", updateCurrentSlide);
+    };
+  }, [api]);
+
+  useEffect(() => {
+    if (open && api) {
+      api.scrollTo(0);
+    }
+
+    if (!open) {
+      videoRefs.current.forEach((video) => video?.pause());
+      return;
+    }
+
+    syncVideoPlayback();
+  }, [open, api]);
 
   return (
     <section id="about" ref={ref} className="relative z-10 bg-white/78 pb-14 pt-10 md:pb-18 md:pt-14 backdrop-blur-sm">
@@ -39,6 +222,77 @@ const AboutSection = () => {
               <p className="mt-3 text-muted-foreground leading-relaxed">
                 Families choose PandaCrest for the balance of high-touch care, engaging classrooms, age-appropriate structure, and memorable school experiences that help little learners love coming to school.
               </p>
+              <Dialog open={open} onOpenChange={setOpen}>
+                <DialogTrigger asChild>
+                  <Button className="mt-5" size="lg">
+                    Explore About Panda Crest
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-3xl p-4 sm:p-6">
+                  <DialogHeader>
+                    <DialogTitle className="font-display text-2xl">About Panda Crest</DialogTitle>
+                    <DialogDescription>
+                      Slide through to discover how Panda Crest supports every child with care, creativity, and confident learning.
+                    </DialogDescription>
+                  </DialogHeader>
+
+                  <Carousel setApi={setApi} opts={{ loop: false }} className="w-full">
+                    <CarouselContent>
+                      {aboutSlides.map((slide) => (
+                        <CarouselItem key={slide.title}>
+                          <div className="grid gap-4 md:grid-cols-2 md:items-center">
+                            {slide.mediaType === "video" ? (
+                              <video
+                                ref={(el) => {
+                                  videoRefs.current = [...videoRefs.current];
+                                  videoRefs.current[aboutSlides.indexOf(slide)] = el;
+                                }}
+                                className="h-56 w-full rounded-2xl object-cover shadow-card-hover bg-black"
+                                controls
+                                playsInline
+                                muted
+                                preload="metadata"
+                              >
+                                <source src={slide.src} type="video/mp4" />
+                                Your browser does not support the video tag.
+                              </video>
+                            ) : (
+                              <img
+                                src={slide.src}
+                                alt={slide.alt}
+                                className="h-56 w-full rounded-2xl object-cover shadow-card-hover"
+                                loading="lazy"
+                              />
+                            )}
+                            <div>
+                              <h4 className="font-display text-xl font-bold text-foreground">{slide.title}</h4>
+                              <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{slide.description}</p>
+                            </div>
+                          </div>
+                        </CarouselItem>
+                      ))}
+                    </CarouselContent>
+                  </Carousel>
+
+                  <DialogFooter className="items-center justify-between gap-3 sm:justify-between sm:space-x-0">
+                    <p className="text-sm text-muted-foreground">
+                      Slide {currentSlide} of {totalSlides}
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        onClick={() => api?.scrollPrev()}
+                        disabled={!api?.canScrollPrev()}
+                      >
+                        Previous
+                      </Button>
+                      <Button onClick={() => api?.scrollNext()} disabled={!api?.canScrollNext()}>
+                        Next
+                      </Button>
+                    </div>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
             </div>
             {pillars.map((p) => (
               <div key={p.title} className={`about-card ${p.color} pastel-card rounded-2xl p-6 hover:shadow-card-hover hover:scale-[1.02] transition-all`}>
